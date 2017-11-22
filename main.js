@@ -39,7 +39,20 @@ function patch (client) {
   var originalQuery = client.query;
 
   if (originalQuery.patched) return client;
-  
+
+  if (client.name === 'PgQueryStream') {
+    class patchedPgQueryStream {
+      constructor (text, values, options) {
+        reparameterized = numericFromNamed(text, values);
+        return originalQuery(reparameterized.text, reparameterized.values, options)
+      }
+    }
+    client.named = patchedPgQueryStream
+    client.patched = true
+    patchedPgQueryStream.patched = true
+    return patchedPgQueryStream
+  }
+
   originalQuery = originalQuery.bind(client);
 
   var patchedQuery = function(config, values, callback) {
